@@ -6,13 +6,32 @@ using MEE7.Backend.HelperFunctions;
 using MEE7.Configuration;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MEE7.Commands
 {
     public class PatchNotes : Command
     {
+        private class GitHubCommit
+        {
+            [JsonPropertyName("message")]
+            public string Message { get; set; }
+        }
+
+        private class GitHubCommitInfo
+        {
+            [JsonPropertyName("sha")]
+            public string Sha { get; set; }
+            [JsonPropertyName("commit")]
+            public GitHubCommit Commit { get; set; }
+            [JsonPropertyName("html_url")]
+            public string HtmlUrl { get; set; }
+        }
+
         public PatchNotes() : base("togglePatchNotes", "Get annoying messages", false, true)
         {
             Program.OnConnected += OnConnected;
@@ -25,21 +44,28 @@ namespace MEE7.Commands
 
             List<string> PatchNotes = new List<string>();
 
-            HtmlWeb web = new HtmlWeb();
-            var searchDoc = web.Load("https://github.com/niklasCarstensen/Discord-Bot/commits/master");
+            var maxResults = 20;
+            var request = WebRequest.Create($"https://api.github.com/repos/niklasCarstensen/Discord-Bot/commits?per_page={maxResults}");
+            request.Headers.Add("User-Agent", "MEE7 Discord-Bot");
+            var response = request.GetResponse();
+            var commitInfos = new List<GitHubCommitInfo>();
 
-            var commits = searchDoc.DocumentNode.SelectNodes("//a[contains(@class, 'Link--primary text-bold js-navigation-open markdown-title')]");
-
-            foreach (var commit in commits)
+            using (StreamReader sr = new StreamReader(response.GetResponseStream()))
             {
-                if (commit.InnerText == Config.Data.LastCommitMessage)
-                    break;
-
-                PatchNotes.Add($"[{commit.InnerText}](https://github.com{commit.GetAttributeValue("href", "")})");
+                var json = sr.ReadToEnd();
+                commitInfos = JsonSerializer.Deserialize<List<GitHubCommitInfo>>(json);
             }
 
-            if (commits.Count > 0)
-                Config.Data.LastCommitMessage = commits.First().InnerText;
+            foreach (var info in commitInfos)
+            {
+                if (info.Commit.Message == Config.Data.LastCommitMessage)
+                    break;
+
+                PatchNotes.Add($"[{info.Commit.Message}]({info.HtmlUrl})");
+            }
+
+            if (commitInfos.Count > 0)
+                Config.Data.LastCommitMessage = commitInfos.First().Commit.Message;
             Config.Save();
 
             PatchNotes.Reverse();
