@@ -53,7 +53,7 @@
     <PackageReference Include="NLayer" Version="1.13.0" />
     <PackageReference Include="NLayer.NAudioSupport" Version="1.1.0" />
     <PackageReference Include="ScottPlot" Version="4.0.40" />
-    <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+    <PackageReference Include="System.Drawing.Common" Version="4.7.2" />
     <PackageReference Include="Tesseract" Version="3.3.0" />
     <PackageReference Include="TweetMoaSharp" Version="6.0.2" />
   </ItemGroup>
